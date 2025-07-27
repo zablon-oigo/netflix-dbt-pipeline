@@ -1,20 +1,97 @@
-version: 2 
+version: 2
 
 sources:
   - name: netflix
-    schema: raw 
+    database: movielens
+    schema: raw
+    description: "Raw data from the Netflix MovieLens dataset"
+
     tables:
       - name: r_movies
-        identifier: raw_movies 
-      - name: r_ratings
-        identifier: raw_ratings 
-      - name: r_tags 
-        identifier: raw_tags 
-      - name: r_genome_tags 
-        identifier: raw_genome_tags 
-      - name: r_genome_scores 
-        identifier: raw_genome_scores 
-      - name: r_links 
-        identifier: raw_links 
+        identifier: raw_movies
+        description: "Raw movies data with movieId, title, and genres."
+        columns:
+          - name: movieId
+            description: "Unique identifier for each movie."
+            tests:
+              - not_null
+              - unique
+          - name: title
+            description: "Title of the movie."
+          - name: genres
+            description: "Pipe-separated list of genres (e.g., Comedy|Drama)."
 
-        
+      - name: r_ratings
+        identifier: raw_ratings
+        description: "Raw ratings data where users rate movies on a scale from 0.5 to 5.0."
+        columns:
+          - name: userId
+            description: "Unique identifier for each user."
+            tests:
+              - not_null
+          - name: movieId
+            description: "Foreign key to the movies table."
+            tests:
+              - not_null
+          - name: rating
+            description: "Rating given by the user."
+          - name: timestamp
+            description: "Unix timestamp when the rating was recorded."
+
+      - name: r_tags
+        identifier: raw_tags
+        description: "User-generated tags for movies."
+        columns:
+          - name: userId
+            description: "Unique identifier for each user."
+            tests:
+              - not_null
+          - name: movieId
+            description: "Foreign key to the movies table."
+            tests:
+              - not_null
+          - name: tag
+            description: "User-assigned tag (e.g., 'classic', 'sci-fi')."
+          - name: timestamp
+            description: "Unix timestamp when the tag was applied."
+
+      - name: r_genome_tags
+        identifier: raw_genome_tags
+        description: "List of tags from the genome project with more standardized tag names."
+        columns:
+          - name: tagId
+            description: "Unique identifier for each tag."
+            tests:
+              - not_null
+              - unique
+          - name: tag
+            description: "Standardized descriptive tag."
+
+      - name: r_genome_scores
+        identifier: raw_genome_scores
+        description: "Relevance scores of genome tags for each movie."
+        columns:
+          - name: movieId
+            description: "Foreign key to the movies table."
+            tests:
+              - not_null
+          - name: tagId
+            description: "Foreign key to genome tags table."
+            tests:
+              - not_null
+          - name: relevance
+            description: "Score indicating how relevant a tag is to a movie."
+
+      - name: r_links
+        identifier: raw_links
+        description: "Links between MovieLens movie IDs and IMDB/TMDB."
+        columns:
+          - name: movieId
+            description: "MovieLens movie ID."
+            tests:
+              - not_null
+              - unique
+          - name: imdbId
+            description: "IMDB identifier (numeric part only)."
+          - name: tmdbId
+            description: "TMDB identifier."
