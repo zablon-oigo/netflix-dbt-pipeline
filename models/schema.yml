@@ -1,0 +1,175 @@
+version: 2
+
+models:
+  - name: top_rated_movies
+    description: "Top 20 movies by average rating, with at least 100 ratings"
+    columns:
+      - name: movie_id
+        tests: [not_null]
+      - name: movie_title
+      - name: avg_rating
+      - name: num_ratings
+      
+  - name: dim_movies
+    description: "Dimension table containing standardized movie metadata, including title and genre information."
+    columns:
+      - name: movie_id
+        description: "Primary key for each movie."
+        tests: [not_null, unique]
+      - name: movie_title
+        description: "Cleaned and properly capitalized title of the movie."
+        tests: [not_null]
+      - name: genre_array
+        description: "List of genres extracted from the original genre string."
+      - name: genres
+        description: "Raw genre string as received from the source data."
+
+  - name: dim_users
+    description: "Dimension table of distinct users who rated or tagged movies."
+    columns:
+      - name: user_id
+        description: "Unique identifier for each user."
+        tests: [not_null, unique]
+
+  - name: dim_genome_tags
+    description: "Dimension table providing human-readable tag labels associated with genome scores."
+    columns:
+      - name: tag_id
+        description: "Unique identifier for each genome tag."
+        tests: [not_null, unique]
+      - name: tag_name
+        description: "Standardized name of the genome tag."
+        tests: [not_null]
+
+  - name: dim_movies_with_tags
+    description: "Enriched dimension table combining movies with their associated genome tags and relevance scores."
+    columns:
+      - name: movie_id
+        description: "Foreign key reference to dim_movies."
+        tests: [not_null]
+      - name: movie_title
+        description: "Title of the movie."
+      - name: genres
+        description: "Genre string associated with the movie."
+      - name: tag_name
+        description: "Associated tag for the movie."
+      - name: relevance_score
+        description: "Relevance of the tag to the movie (0-1 scale)."
+
+
+  - name: fct_ratings
+    description: "Fact table capturing user-provided ratings of movies along with timestamps."
+    columns:
+      - name: user_id
+        description: "Foreign key reference to dim_users."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_users')
+              field: user_id
+      - name: movie_id
+        description: "Foreign key reference to dim_movies."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_movies')
+              field: movie_id
+      - name: rating
+        description: "User rating for the movie (e.g., 0.5 to 5.0)."
+        tests: [not_null]
+      - name: rating_timestamp
+        description: "Timestamp when the rating was submitted (UNIX format)."
+
+  - name: fct_genome_scores
+    description: "Fact table representing the relevance scores of genome tags for each movie."
+    columns:
+      - name: movie_id
+        description: "Foreign key to dim_movies."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_movies')
+              field: movie_id
+      - name: tag_id
+        description: "Foreign key to dim_genome_tags."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_genome_tags')
+              field: tag_id
+      - name: relevance_score
+        description: "Score from 0 to 1 indicating the tag's relevance to the movie."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1
+              strictly: true
+
+
+  - name: mart_movie_release
+    description: "Mart table used for enriching movies with release date metadata (from seed or external sources)."
+    columns:
+      - name: movie_id
+        description: "Foreign key to dim_movies."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_movies')
+              field: movie_id
+      - name: release_date
+        description: "Release date of the movie (may be null if unavailable)."
+
+
+  - name: stg_movies
+    description: "Staging model for raw movie data from source."
+    columns:
+      - name: movie_id
+        description: "Unique movie identifier."
+        tests: [not_null, unique]
+      - name: title
+        description: "Original title of the movie."
+      - name: genres
+        description: "Pipe-separated genres for the movie."
+
+  - name: stg_ratings
+    description: "Staging model for raw ratings data from source."
+    columns:
+      - name: user_id
+        description: "Identifier of the user giving the rating."
+        tests: [not_null]
+      - name: movie_id
+        description: "Identifier of the rated movie."
+        tests: [not_null]
+      - name: rating
+        description: "Rating value given by the user."
+      - name: rating_timestamp
+        description: "Timestamp when the rating was submitted (UNIX)."
+
+  - name: stg_tags
+    description: "Staging model for raw tag data from source."
+    columns:
+      - name: user_id
+      - name: movie_id
+      - name: tag
+      - name: tag_timestamp
+
+  - name: stg_genome_tags
+    description: "Staging model for genome tag definitions from source."
+    columns:
+      - name: tag_id
+      - name: tag
+
+  - name: stg_genome_score
+    description: "Staging model for genome relevance scores from source."
+    columns:
+      - name: movie_id
+      - name: tag_id
+      - name: relevance
+
+  - name: stg_links
+    description: "Staging model for link data mapping movie IDs to IMDB and TMDB."
+    columns:
+      - name: movie_id
+      - name: imdb_id
+      - name: tmdb_id
