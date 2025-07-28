@@ -17,5 +17,19 @@ clean-targets:
 
 models:
   netflix:
+    +materialized: view 
     staging:
-      +materialized: view
+      +materialized: view 
+    dim:
+      +materialized: table
+    fct:
+      +materialized: table
+    marts:
+      +materialized: table
+
+seeds:
+  netflix:
+    movie_release_dates:
+      column_types:
+        movie_id: integer
+        release_date: date
