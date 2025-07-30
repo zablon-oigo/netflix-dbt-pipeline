@@ -114,3 +114,4 @@ airflow_settings.yaml
 airflow.db
 airflow.cfg
 .astro/
+.dbt/
